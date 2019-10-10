@@ -1,0 +1,31 @@
+[package]
+name = "pigmnts"
+version = "0.1.0"
+authors = ["Akash Hamirwasia"]
+edition = "2018"
+description = "Generate a color palette from an image using WebAssesmbly"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/blenderskool/pigmnts.git"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rand = { version = "0.7.2", features = ["wasm-bindgen"] }
+
+[dependencies.wasm-bindgen]
+version = "0.2.50"
+
+[dependencies.web-sys]
+version = "*"
+features = [
+  "HtmlCanvasElement",
+  "ImageData",
+  "CanvasRenderingContext2d",
+  # "console"
+]
+
+[profile.release]
+lto = true
+opt-level = 'z'
