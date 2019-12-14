@@ -3,11 +3,12 @@ Pigmnts is a color palette generator built using Rust, compiled to WebAssembly. 
 
 ## Functions
 Pigmnts exposes following function in WebAssembly
-### pigments(c: `HtmlCanvasElement`, num_colors: `u8`)
+### pigments(canvas: `HtmlCanvasElement`, num_colors: `u8`, batch_size: `Option<u32>`)
 > Returns an array of **[8-digit Hex](https://css-tricks.com/8-digit-hex-codes/) color codes** as strings found in the image. Eg. ["#6DDAD0FF", "#FF3A940A"]
 
-A `<canvas>` element is passed as one of the arguments which has the image to be processed. Internally, the pixel data is taken from the canvas, and then clustered to create the color palette.
-`num_colors` defines the number of colors to be gathered from the image.
+- `canvas` canvas element which has the image to be processed. Internally, the pixel data is taken from the canvas, and then clustered to create the color palette.  
+- `num_colors` defines the number of colors to be gathered from the image.  
+- `batch_size` (optional) defines the number of pixels to randomly sample from the image. It should be greater than the total number of pixels in the image and the `num_colors`. By default, all the pixels in the image are processed.
 
 If this crate is used in some Rust projects, then following function is also available
 ### pigments_pixels(pixels: `&Vec<RGBA>`, num_colors: `u8`)
