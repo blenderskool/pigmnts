@@ -35,6 +35,16 @@ impl RGBA {
         return ((diff.r.pow(2) + diff.g.pow(2) + diff.b.pow(2) + diff.a.pow(2)) as f32).sqrt();
     }
 
+    /**
+     * Converts the color to the corresponding hex color code
+     */
+    pub fn hex(&self) -> String {
+        str::replace(
+            &format!("#{:2X}{:2X}{:2X}{:2X}", self.r, self.g, self.b, self.a),
+            " ",
+            "0",
+        )
+    }
 }
 
 impl From<RGBA<i32>> for RGBA<u8> {

@@ -16,6 +16,9 @@ rand = { version = "0.7.2", features = ["wasm-bindgen"] }
 
 [dependencies.wasm-bindgen]
 version = "0.2.50"
+features = [
+  "serde-serialize"
+]
 
 [dependencies.web-sys]
 version = "0.3.30"

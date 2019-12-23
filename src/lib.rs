@@ -6,6 +6,7 @@ pub mod rgba;
 
 use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
 use rgba::{Pixels, RGBA};
+use std::collections::HashMap;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
@@ -33,7 +34,7 @@ fn recal_means(colors: &Vec<RGBA>) -> RGBA<u8> {
 /**
  * K-means++ clustering to create the palette
  */
-pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Pixels {
+pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
     let mut rng = rand::thread_rng();
 
     // Randomly pick the starting cluster center
@@ -53,15 +54,28 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Pixels {
         // If error occurs, return the means already found
         let dist = match WeightedIndex::new(&distances) {
             Ok(t) => t,
-            Err(_) => return means,
+            Err(_) => {
+                // Calculate the dominance of each color
+                let mut palette: Vec<(RGBA, f32)> =
+                    means.iter().map(|c| (c.clone(), 0.0)).collect();
+
+                let len = pixels.len() as f32;
+                for color in pixels.iter() {
+                    let near = color.nearest(&means).0;
+                    palette[near].1 += 1.0 / len;
+                }
+
+                return palette;
+            }
         };
 
         // Using the distances^2 as weights, pick a color and use it as a cluster center
         means.push(pixels[dist.sample(&mut rng)].clone());
     }
 
+    let mut clusters: Vec<Pixels>;
     loop {
-        let mut clusters: Vec<Pixels> = means.iter().map(|mean| vec![mean.clone()]).collect();
+        clusters = means.iter().map(|mean| vec![mean.clone()]).collect();
 
         for color in pixels.iter() {
             clusters[color.nearest(&means).0].push(color.clone());
@@ -81,13 +95,27 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Pixels {
             break;
         }
     }
-    // Sort the colors based on their brightness
-    means.sort_by(|a, b| b.brightness().partial_cmp(&a.brightness()).unwrap());
-    return means;
+
+    // The length of every cluster divided by total pixels gives the dominance of each mean
+    // 1 is subtracted since cluster includes the mean color as it's first item, which shouldn't
+    // be included in the dominance
+    // For every mean, the corresponding dominance is added as a tuple item
+    let palette: Vec<(RGBA, f32)> = means
+        .iter()
+        .enumerate()
+        .map(|(i, mean)| {
+            (
+                mean.clone(),
+                (clusters[i].len() - 1) as f32 / pixels.len() as f32,
+            )
+        })
+        .collect();
+
+    return palette;
 }
 
 #[wasm_bindgen]
-pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> Vec<JsValue> {
+pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> JsValue {
     // Get context from canvas element
     let ctx = canvas
         .get_context("2d")
@@ -124,19 +152,13 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> Ve
             .collect();
     }
 
-    // Generate the color palette
-    let palette = pigments_pixels(&pixels, k);
+    let mut palette = HashMap::new();
+    // Generate the color palette and conver it to a hashmap
+    // with keys as color hex codes, and values as dominance
+    for (color, dominance) in pigments_pixels(&pixels, k).iter() {
+        palette.insert(color.hex(), *dominance);
+    }
 
-    // Convert it to a Vector of Hex color code strings
-    return palette
-        .iter()
-        .map(|c| {
-            str::replace(
-                &format!("#{:2X}{:2X}{:2X}{:2X}", c.r, c.g, c.b, c.a),
-                " ",
-                "0",
-            )
-            .into()
-        })
-        .collect();
+    // Convert to a JS value
+    return JsValue::from_serde(&palette).unwrap();
 }
