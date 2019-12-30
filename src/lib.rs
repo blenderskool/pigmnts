@@ -2,44 +2,44 @@ extern crate rand;
 extern crate wasm_bindgen;
 extern crate web_sys;
 
-pub mod rgba;
+pub mod color;
 
 use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
-use rgba::{Pixels, RGBA};
+use color::{RGB, LAB};
 use std::collections::HashMap;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
+type Pixels = Vec<LAB>;
+
 /**
  * Recalculate the means
  */
-fn recal_means(colors: &Vec<RGBA>) -> RGBA<u8> {
-    let mut new_color: RGBA<i32> = colors[0].clone().into();
+fn recal_means(colors: &Vec<&LAB>) -> LAB {
+    let mut new_color: LAB = colors[0].clone();
 
     for i in 1..colors.len() {
-        new_color.r += colors[i].r as i32;
-        new_color.g += colors[i].g as i32;
-        new_color.b += colors[i].b as i32;
-        new_color.a += colors[i].a as i32;
+        new_color.l += colors[i].l;
+        new_color.a += colors[i].a;
+        new_color.b += colors[i].b;
     }
 
-    new_color.r /= colors.len() as i32;
-    new_color.g /= colors.len() as i32;
-    new_color.b /= colors.len() as i32;
-    new_color.a /= colors.len() as i32;
+    let len = colors.len() as f32;
+    new_color.l /= len;
+    new_color.a /= len;
+    new_color.b /= len;
 
-    return new_color.into();
+    return new_color;
 }
 
 /**
  * K-means++ clustering to create the palette
  */
-pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
+pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(LAB, f32)> {
     let mut rng = rand::thread_rng();
 
     // Randomly pick the starting cluster center
     let i: usize = rng.gen_range(0, pixels.len());
-    // let initial = recal_means(&pixels);
     let mut means: Pixels = vec![pixels[i].clone()];
 
     // Pick the remaining (k-1) means
@@ -47,7 +47,7 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
         // Calculate the (nearest_distance)^2 for every color in the image
         let distances: Vec<f32> = pixels
             .iter()
-            .map(|color| (color.nearest(&means).1 as f32).powf(2.0))
+            .map(|color| (color.nearest(&means).1).powi(2))
             .collect();
 
         // Create a weighted distribution based on distance^2
@@ -56,8 +56,7 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
             Ok(t) => t,
             Err(_) => {
                 // Calculate the dominance of each color
-                let mut palette: Vec<(RGBA, f32)> =
-                    means.iter().map(|c| (c.clone(), 0.0)).collect();
+                let mut palette: Vec<(LAB, f32)> = means.iter().map(|c| (c.clone(), 0.0)).collect();
 
                 let len = pixels.len() as f32;
                 for color in pixels.iter() {
@@ -73,17 +72,17 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
         means.push(pixels[dist.sample(&mut rng)].clone());
     }
 
-    let mut clusters: Vec<Pixels>;
+    let mut clusters: Vec<Vec<&LAB>>;
     loop {
-        clusters = means.iter().map(|mean| vec![mean.clone()]).collect();
+        clusters = vec![Vec::new(); k as usize];
 
         for color in pixels.iter() {
-            clusters[color.nearest(&means).0].push(color.clone());
+            clusters[color.nearest(&means).0].push(color);
         }
 
         let mut changed: bool = false;
-        for (i, cluster) in clusters.iter().enumerate() {
-            let new_mean = recal_means(cluster);
+        for i in 0..clusters.len() {
+            let new_mean = recal_means(&clusters[i]);
             if means[i] != new_mean {
                 changed = true;
             }
@@ -97,16 +96,14 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8) -> Vec<(RGBA, f32)> {
     }
 
     // The length of every cluster divided by total pixels gives the dominance of each mean
-    // 1 is subtracted since cluster includes the mean color as it's first item, which shouldn't
-    // be included in the dominance
     // For every mean, the corresponding dominance is added as a tuple item
-    let palette: Vec<(RGBA, f32)> = means
+    let palette: Vec<(LAB, f32)> = clusters
         .iter()
         .enumerate()
-        .map(|(i, mean)| {
+        .map(|(i, cluster)| {
             (
-                mean.clone(),
-                (clusters[i].len() - 1) as f32 / pixels.len() as f32,
+                means[i].clone(),
+                cluster.len() as f32 / pixels.len() as f32,
             )
         })
         .collect();
@@ -134,12 +131,12 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> Js
     // Convert to Pixels type
     let mut pixels: Pixels = (0..data.len())
         .step_by(4)
-        .map(|i| RGBA {
+        .map(|i| RGB {
             r: data[i],
             g: data[i + 1],
-            b: data[i + 2],
-            a: data[i + 3],
+            b: data[i + 2]
         })
+        .map(|c| LAB::from(&c))
         .collect();
 
     // Randomly choose a sample of batch size if given
@@ -153,10 +150,10 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> Js
     }
 
     let mut palette = HashMap::new();
-    // Generate the color palette and conver it to a hashmap
+    // Generate the color palette and convert it to a hashmap
     // with keys as color hex codes, and values as dominance
     for (color, dominance) in pigments_pixels(&pixels, k).iter() {
-        palette.insert(color.hex(), *dominance);
+        palette.insert(RGB::from(color).hex(), *dominance);
     }
 
     // Convert to a JS value
