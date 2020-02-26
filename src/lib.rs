@@ -3,9 +3,11 @@ extern crate wasm_bindgen;
 extern crate web_sys;
 
 pub mod color;
+mod weights;
 
 use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
 use color::{RGB, LAB};
+use weights::{Mood, WeightFn, resolve_mood};
 use std::{collections::HashMap};
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
@@ -15,8 +17,7 @@ type Pixels = Vec<LAB>;
 /**
  * Recalculate the means
  */
-fn recal_means<F>(colors: &Vec<&LAB>, weight: F) -> LAB
-    where F: Fn(&LAB) -> f32 {
+fn recal_means(colors: &Vec<&LAB>, weight: WeightFn) -> LAB {
     let mut new_color = LAB {
         l: 0.0,
         a: 0.0,
@@ -42,8 +43,7 @@ fn recal_means<F>(colors: &Vec<&LAB>, weight: F) -> LAB
 /**
  * K-means++ clustering to create the palette
  */
-pub fn pigments_pixels<F>(pixels: &Pixels, k: u8, weight: F) -> Vec<(LAB, f32)>
-    where F: Fn(&LAB) -> f32 {
+pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn) -> Vec<(LAB, f32)> {
     let mut rng = rand::thread_rng();
 
     // Randomly pick the starting cluster center
@@ -90,7 +90,7 @@ pub fn pigments_pixels<F>(pixels: &Pixels, k: u8, weight: F) -> Vec<(LAB, f32)>
 
         let mut changed: bool = false;
         for i in 0..clusters.len() {
-            let new_mean = recal_means(&clusters[i], &weight);
+            let new_mean = recal_means(&clusters[i], weight);
             if means[i] != new_mean {
                 changed = true;
             }
@@ -118,7 +118,7 @@ pub fn pigments_pixels<F>(pixels: &Pixels, k: u8, weight: F) -> Vec<(LAB, f32)>
 }
 
 #[wasm_bindgen]
-pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> JsValue {
+pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option<u32>) -> JsValue {
     // Get context from canvas element
     let ctx = canvas
         .get_context("2d")
@@ -158,7 +158,8 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, batch_size: Option<u32>) -> Js
     let mut palette = HashMap::new();
     // Generate the color palette and convert it to a hashmap
     // with keys as color hex codes, and values as dominance
-    for (color, dominance) in pigments_pixels(&pixels, k, |_| 1.0).iter() {
+    let weight: WeightFn = resolve_mood(&mood);
+    for (color, dominance) in pigments_pixels(&pixels, k, weight).iter() {
         palette.insert(RGB::from(color).hex(), *dominance);
     }
 
