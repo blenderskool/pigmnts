@@ -14,6 +14,13 @@ pub struct LAB {
     pub b: f32
 }
 
+#[derive(Clone)]
+pub struct HSL {
+    pub h: f32,
+    pub s: f32,
+    pub l: f32
+}
+
 // RGB -> XYZ -> LAB conversions and vice versa from https://www.easyrgb.com/en/math.php
 // Continuity correction of the function from http://www.brucelindbloom.com/index.html?LContinuity.html
 const KAPPA: f32 = 24389.0 / 27.0;
@@ -84,8 +91,62 @@ impl From<&LAB> for RGB {
     }
 }
 
+fn hue_to_rgb(v1: f32, v2: f32, mut vh: f32) -> f32 {
+    if vh < 0.0 {
+        vh += 1.0;
+    }
+    if vh > 1.0 {
+        vh -= 1.0;
+    }
+
+    if 6.0 * vh < 1.0 {
+        return v1 + ( v2 - v1 ) * 6.0 * vh;
+    }
+    if 2.0 * vh < 1.0 {
+        return v2;
+    }
+    if 3.0 * vh < 2.0 {
+        return v1 + ( v2 - v1 ) * ( ( 2.0 / 3.0 ) - vh ) * 6.0;
+    }
+
+    return v1;
+}
+
+impl From<&HSL> for RGB {
+    fn from(color: &HSL) -> Self {
+        let mut rgb_color = RGB {
+            r: (color.l * 255.0) as u8,
+            g: (color.l * 255.0) as u8,
+            b: (color.l * 255.0) as u8
+        };
+
+        if color.s != 0.0 {
+            let var_2 = if color.l < 0.5 {
+                color.l * (1.0 + color.s)
+            } else {
+                (color.l + color.s) - (color.s * color.l)
+            };
+
+            let var_1 = 2.0 * color.l - var_2;
+
+            rgb_color.r = (255.0 * hue_to_rgb(var_1, var_2, color.h + 1.0/3.0)) as u8;
+            rgb_color.g = (255.0 * hue_to_rgb(var_1, var_2, color.h)) as u8;
+            rgb_color.b = (255.0 * hue_to_rgb(var_1, var_2, color.h - ( 1.0 / 3.0 ) )) as u8;
+        }
+
+        return rgb_color;
+    }
+}
+
 
 impl LAB {
+
+    /**
+     * Calculates the chroma of the color 
+     */
+    pub fn chroma(&self) -> f32 {
+        (self.a.powi(2) + self.b.powi(2)).sqrt()
+    }
 
     /**
      * Finds the index and distance from nearest color from a group of colors
@@ -168,6 +229,60 @@ impl From<&RGB> for LAB {
             a: 500.0 * (var_x - var_y),
             b: 200.0 * (var_y - var_z)
         };
+    }
+}
+
+impl From<&RGB> for HSL {
+    fn from(color: &RGB) -> Self {
+        let var_r = color.r as f32 / 255.0;
+        let var_g = color.g as f32 / 255.0;
+        let var_b = color.b as f32 / 255.0;
+
+        let var_max = var_r.max(var_g.max(var_b));
+        let var_min = var_r.min(var_g.min(var_b));
+        let del_max = var_max - var_min;
+
+        let mut hsl_color = HSL {
+            h: 0.0,
+            s: 0.0,
+            l: (var_max + var_min) / 2.0
+        };
+
+        if del_max != 0.0 {
+            hsl_color.s = if hsl_color.l < 0.5 {
+                del_max / (var_max + var_min)
+            } else {
+                del_max / (2.0 - var_max - var_min)
+            };
+
+            let del_r = (((var_max - var_r) / 6.0) + del_max / 2.0) / del_max;
+            let del_g = (((var_max - var_g) / 6.0) + del_max / 2.0) / del_max;
+            let del_b = (((var_max - var_b) / 6.0) + del_max / 2.0) / del_max;
+
+            hsl_color.h = if var_r == var_max {
+                del_b - del_g
+            } else if var_g == var_max {
+                1.0 / 3.0 + del_r - del_b
+            } else if var_b == var_max {
+                2.0 / 3.0 + del_g - del_r
+            } else {
+                hsl_color.h
+            };
+
+            if hsl_color.h < 0.0 {
+                hsl_color.h += 1.0;
+            } else if hsl_color.h > 1.0 {
+                hsl_color.h -= 1.0;
+            }
+        }
+
+        return hsl_color;
+    }
+}
+
+impl From<&LAB> for HSL {
+    fn from(color: &LAB) -> Self {
+        return HSL::from(&RGB::from(color));
     }
 }
 
