@@ -3,7 +3,7 @@ extern crate wasm_bindgen;
 extern crate web_sys;
 
 pub mod color;
-mod weights;
+pub mod weights;
 
 use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
 use color::{RGB, LAB};
@@ -12,7 +12,7 @@ use std::{collections::HashMap};
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
-type Pixels = Vec<LAB>;
+pub type Pixels = Vec<LAB>;
 
 /**
  * Recalculate the means

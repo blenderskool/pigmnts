@@ -9,10 +9,22 @@ readme = "README.md"
 repository = "https://github.com/blenderskool/pigmnts.git"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pigmnts"
+doc = false
 
 [dependencies]
-rand = { version = "0.7.2", features = ["wasm-bindgen"] }
+clap = "2.33.0"
+image = "0.23.2"
+spinners = "1.2.0"
+console = "0.10.0"
+
+[dependencies.rand]
+version = "0.7.2"
+features = ["wasm-bindgen"]
 
 [dependencies.wasm-bindgen]
 version = "0.2.50"
