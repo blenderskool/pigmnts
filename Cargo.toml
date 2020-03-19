@@ -20,7 +20,7 @@ doc = false
 clap = "2.33.0"
 image = "0.23.2"
 spinners = "1.2.0"
-console = "0.10.0"
+termion = "1.5.5"
 
 [dependencies.rand]
 version = "0.7.2"
