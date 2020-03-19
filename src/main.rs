@@ -1,13 +1,13 @@
 #[macro_use]
 extern crate clap;
 extern crate spinners;
-extern crate console;
+extern crate termion;
 extern crate image;
 extern crate pigmnts;
 
 use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
-use console::style;
+use termion::{color, style};
 use std::path::Path;
 use std::time::Instant;
 use image::GenericImageView;
@@ -16,8 +16,8 @@ use pigmnts::{Pixels, color::{LAB, RGB}, weights, pigments_pixels};
 fn main() {
 
   let matches = App::new("Pigmnts")
-                  .version("0.3.0")
-                  .author("Akash Hamirwasia")
+                  .version(env!("CARGO_PKG_VERSION"))
+                  .author(env!("CARGO_PKG_AUTHORS"))
                   .about("Create color palette from image")
                   .arg(Arg::with_name("count")
                         .short("c")
@@ -35,18 +35,18 @@ fn main() {
   let image_path = matches.value_of("INPUT").unwrap();
   let count = value_t!(matches, "count", u8).unwrap_or(5);
 
+  print!("{}{}Creating a palette of ", color::Fg(color::White), style::Bold);
+  print!("{}{} ", color::Fg(color::Blue), count);
+  print!("{}colors from ", color::Fg(color::White));
   println!(
-    "{} {} {} {}",
-    style("Creating a palette of").bold(),
-    style(count).blue().bold(),
-    style("colors from").bold(),
-    style(
-      Path::new(image_path)
-        .file_stem()
-        .unwrap()
-        .to_str()
-        .unwrap()
-    ).blue().bold(),
+    "{}{}{}",
+    color::Fg(color::Blue),
+    Path::new(image_path)
+      .file_stem()
+      .unwrap()
+      .to_str()
+      .unwrap(),
+    style::Reset
   );
   
   let img = image::open(image_path).unwrap();
@@ -58,23 +58,36 @@ fn main() {
       &RGB {
         r: pix[0],
         g: pix[1],
-        b: pix[2]
+        b: pix[2],
       }
     ));
   }
 
-  
+  // Show the spinner in the terminal
   let sp = Spinner::new(Spinners::Dots, String::default());
   
   let weightfn = weights::resolve_mood(&weights::Mood::Dominant);
-  // TODO: Generate proper output
-  let _output = pigments_pixels(&pixels, count, weightfn);
+  let mut output = pigments_pixels(&pixels, count, weightfn);
+
+  // Sort the output colors based on dominance
+  output.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
+  // Stop the spinner
   sp.stop();
 
+  println!();
+  for (color, dominance) in output.iter() {
+    let rgb: RGB = RGB::from(color);
+    print!("{}  {} ", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset);
+    print!("{}{}{} ", style::Bold, rgb.hex(), style::Reset);
+    println!("--- {}%", dominance * 100.0);
+  }
 
   println!(
-    "{} Took {}ms",
-    style("✓ Success!").green().bold(),
-    now.elapsed().as_millis(),
-  )
+    "{}{}✓ Success!{} Took {}ms",
+    color::Fg(color::Green),
+    style::Bold,
+    style::Reset,
+    now.elapsed().as_millis()
+  );
 }
