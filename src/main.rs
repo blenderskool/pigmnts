@@ -49,7 +49,9 @@ fn main() {
     style::Reset
   );
   
-  let img = image::open(image_path).unwrap();
+  let img = image::open(image_path)
+    .unwrap()
+    .resize(800, 800, image::imageops::FilterType::CatmullRom);
   let mut pixels: Pixels = Vec::new();
 
   let now = Instant::now();
