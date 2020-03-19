@@ -1,6 +1,6 @@
 [package]
-name = "pigmnts"
-version = "0.3.0"
+name = "pigmnts-cli"
+version = "0.1.0"
 authors = ["Akash Hamirwasia"]
 edition = "2018"
 description = "Generate a color palette from an image using WebAssesmbly"
@@ -8,39 +8,14 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/blenderskool/pigmnts.git"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-path = "src/lib.rs"
-
-[[bin]]
-name = "pigmnts"
-doc = false
-
 [dependencies]
 clap = "2.33.0"
 image = "0.23.2"
 spinners = "1.2.0"
 termion = "1.5.5"
+pigmnts = { path = "lib" }
 
-[dependencies.rand]
-version = "0.7.2"
-features = ["wasm-bindgen"]
-
-[dependencies.wasm-bindgen]
-version = "0.2.50"
-features = [
-  "serde-serialize"
+[workspace]
+members = [
+  "lib"
 ]
-
-[dependencies.web-sys]
-version = "0.3.30"
-features = [
-  "HtmlCanvasElement",
-  "ImageData",
-  "CanvasRenderingContext2d",
-  # "console"
-]
-
-[profile.release]
-lto = true
-opt-level = 'z'

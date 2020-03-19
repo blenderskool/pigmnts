@@ -49,6 +49,9 @@ fn main() {
     style::Reset
   );
   
+  // Show the spinner in the terminal
+  let sp = Spinner::new(Spinners::Dots, String::default());
+
   let img = image::open(image_path)
     .unwrap()
     .resize(800, 800, image::imageops::FilterType::CatmullRom);
@@ -65,9 +68,6 @@ fn main() {
     ));
   }
 
-  // Show the spinner in the terminal
-  let sp = Spinner::new(Spinners::Dots, String::default());
-  
   let weightfn = weights::resolve_mood(&weights::Mood::Dominant);
   let mut output = pigments_pixels(&pixels, count, weightfn);
 
