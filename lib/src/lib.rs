@@ -10,7 +10,7 @@ use color::{RGB, LAB};
 use weights::{Mood, WeightFn, resolve_mood};
 use std::{collections::HashMap};
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 pub type Pixels = Vec<LAB>;
 
