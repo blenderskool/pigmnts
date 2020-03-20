@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate prettytable;
 extern crate spinners;
 extern crate termion;
 extern crate image;
@@ -8,6 +10,7 @@ extern crate pigmnts;
 use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
 use termion::{color, style};
+use prettytable::{Table, format};
 use std::{path::Path, time::Instant, process};
 use image::GenericImageView;
 use pigmnts::{Pixels, color::{LAB, RGB}, weights, pigments_pixels};
@@ -96,10 +99,24 @@ fn main() {
           process::exit(1);
         });
 
-      for (color, _) in result.iter() {
-        let rgb: RGB = RGB::from(color);
-        println!("{}", rgb.hex());
+      let mut table = Table::new();
+      table.set_format(
+        format::FormatBuilder::new()
+          .padding(0, 0)
+          .borders('\0')
+          .column_separator(':')
+          .build()
+      );
+
+      for (color, dominance) in result.iter() {
+        let rgb = RGB::from(color);
+
+        table.add_row(row![
+          rgb.hex(),
+          dominance * 100.0,
+        ]);
       }
+      table.printstd();
 
     } else {
 
@@ -127,12 +144,24 @@ fn main() {
       match output {
         Ok((result, time)) => {
 
+          let mut table = Table::new();
+          table.set_format(
+            format::FormatBuilder::from(*format::consts::FORMAT_CLEAN)
+              .padding(2, 2)
+              .build()
+          );
+          table.set_titles(row!["", c -> "Hex", c -> "Dominance"]);
+          
           for (color, dominance) in result.iter() {
-            let rgb: RGB = RGB::from(color);
-            print!("{}  {} ", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset);
-            print!("{}{}{} ", style::Bold, rgb.hex(), style::Reset);
-            println!("--- {}%", dominance * 100.0);
+            let rgb = RGB::from(color);
+
+            table.add_row(row![
+              format!("{}  {}", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset),
+              format!("{}{}{}", style::Bold, rgb.hex(), style::Reset),
+              format!("{}%", dominance * 100.0),
+            ]);
           }
+          table.printstd();
           println!();
 
           println!(
