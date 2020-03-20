@@ -144,13 +144,13 @@ fn main() {
   for (i, image_path) in image_paths.enumerate() {
   
     if is_quiet {
-      // Quiet mode only shows the color codes in resulting palette
+      // Quiet mode only shows the result separated by ':'
 
       let (result, _) = pigmnts(image_path, counts[i])
-        .unwrap_or_else(|err| {
-          eprintln!("Problem creating palette: {}", err);
-          process::exit(1);
-        });
+                          .unwrap_or_else(|err| {
+                            eprintln!("Problem creating palette: {}", err);
+                            process::exit(1);
+                          });
 
       for (color, dominance) in result.iter() {
         let rgb = RGB::from(color);
@@ -184,72 +184,75 @@ fn main() {
 
       // Show the spinner in the terminal
       let sp = Spinner::new(Spinners::Dots, String::default());
-      let output = pigmnts(image_path, counts[i]);
+      let (result, time) = pigmnts(image_path, counts[i])
+                            .unwrap_or_else(|e| {
+                              eprintln!(
+                                "{}{}Problem creating palette:{} {}",
+                                color::Fg(color::Red),
+                                style::Bold,
+                                style::Reset,
+                                e
+                              );
+                              process::exit(1);
+                            });
+
       // Stop the spinner
       sp.stop();
       println!();
 
-      match output {
-        Ok((result, time)) => {
-
-          let mut table = Table::new();
-          table.set_format(
-            format::FormatBuilder::from(*format::consts::FORMAT_CLEAN)
-              .padding(2, 2)
-              .build()
-          );
-          let titles = conditional_vec![
-            true => "",
-            is_hex => "Hex",
-            is_rgb => "RGB",
-            is_hsl => "HSL",
-            is_lab => "LAB",
-            is_dom => "Dominance"
-          ];
-          table.set_titles(
-            Row::new(
-              titles
-                .iter()
-                .map(|x| cell!(bcFw -> x))
-                .collect()
-            )
-          );
+      let mut table = Table::new();
+      table.set_format(
+        format::FormatBuilder::from(*format::consts::FORMAT_CLEAN)
+          .padding(2, 2)
+          .build()
+      );
+      let titles = conditional_vec![
+        true => "",  // Title for color preview
+        is_hex => "Hex",
+        is_rgb => "RGB",
+        is_hsl => "HSL",
+        is_lab => "LAB",
+        is_dom => "Dominance"
+      ];
+      table.set_titles(
+        Row::new(
+          titles
+            .iter()
+            .map(|x| cell!(bcFw -> x))
+            .collect()
+        )
+      );
+      
+      for (color, dominance) in result.iter() {
+        let rgb = RGB::from(color);
+        let values = conditional_vec![
+          is_hex => rgb.hex(),
+          is_rgb => rgb,
+          is_hsl => HSL::from(color),
+          is_lab => color,
+          is_dom => format!("{}%", dominance * 100.0)
+        ];
+        let mut record = row![
+          // Color preview is added
+          format!("{}  {}", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset)
+        ];
           
-          for (color, dominance) in result.iter() {
-            let rgb = RGB::from(color);
-            let values = conditional_vec![
-              is_hex => rgb.hex(),
-              is_rgb => rgb,
-              is_hsl => HSL::from(color),
-              is_lab => color,
-              is_dom => format!("{}%", dominance * 100.0)
-            ];
-            let mut record = row![format!("{}  {}", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset)];
-              
-            for value in values.iter() {
-              record.add_cell(cell!(value));
-            }
+        for value in values.iter() {
+          record.add_cell(cell!(value));
+        }
 
-            table.add_row(record);
-          }
-          table.printstd();
-          println!();
+        table.add_row(record);
+      }
+      table.printstd();
+      println!();
 
-          println!(
-            "{}{}✓ Success!{} Took {}ms",
-            color::Fg(color::Green),
-            style::Bold,
-            style::Reset,
-            time
-          );
-
-        },
-        Err(e) => {
-          eprintln!("{}{}Problem creating palette:{} {}", color::Fg(color::Red), style::Bold, style::Reset, e);
-          process::exit(1);
-        },
-      };
-
+      println!(
+        "{}{}✓ Success!{} Took {}ms",
+        color::Fg(color::Green),
+        style::Bold,
+        style::Reset,
+        time
+      );
     }
   }
 
