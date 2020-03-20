@@ -8,18 +8,17 @@ extern crate pigmnts;
 use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
 use termion::{color, style};
-use std::path::Path;
-use std::time::Instant;
+use std::{path::Path, time::Instant, process};
 use image::GenericImageView;
 use pigmnts::{Pixels, color::{LAB, RGB}, weights, pigments_pixels};
 
 /// Creates a color palette from image
 /// 
 /// Image is loaded from `image_path` and a palette of `count` colors are created
-fn pigmnts(image_path: &str, count: u8) -> (Vec<(LAB, f32)>, u128) {
-  let img = image::open(image_path)
-    .unwrap()
-    .resize(800, 800, image::imageops::FilterType::CatmullRom);
+fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), image::ImageError> {
+  let img = image::open(image_path)?
+              .resize(800, 800, image::imageops::FilterType::CatmullRom);
+
   let mut pixels: Pixels = Vec::new();
 
   // Start a timer
@@ -41,7 +40,7 @@ fn pigmnts(image_path: &str, count: u8) -> (Vec<(LAB, f32)>, u128) {
   // Sort the output colors based on dominance
   output.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
 
-  return (output, now.elapsed().as_millis());
+  return Ok((output, now.elapsed().as_millis()));
 }
 
 fn main() {
@@ -72,7 +71,7 @@ fn main() {
                   .get_matches();
 
   let image_paths = matches.values_of("input").unwrap();
-  let mut counts = values_t!(matches, "count", u8).unwrap_or_else(|e| e.exit());
+  let mut counts = values_t!(matches, "count", u8).unwrap_or(Vec::new());
   let is_quiet = matches.is_present("quiet");
 
   // Fill the default count value (5) for every input file if not specified
@@ -91,7 +90,12 @@ fn main() {
     if is_quiet {
       // Quiet mode only shows the color codes in resulting palette
 
-      let (result, _) = pigmnts(image_path, counts[i]);
+      let (result, _) = pigmnts(image_path, counts[i])
+        .unwrap_or_else(|err| {
+          eprintln!("Problem creating palette: {}", err);
+          process::exit(1);
+        });
+
       for (color, _) in result.iter() {
         let rgb: RGB = RGB::from(color);
         println!("{}", rgb.hex());
@@ -115,26 +119,36 @@ fn main() {
 
       // Show the spinner in the terminal
       let sp = Spinner::new(Spinners::Dots, String::default());
-      let (result, time) = pigmnts(image_path, counts[i]);
+      let output = pigmnts(image_path, counts[i]);
       // Stop the spinner
       sp.stop();
-
-      println!();
-      for (color, dominance) in result.iter() {
-        let rgb: RGB = RGB::from(color);
-        print!("{}  {} ", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset);
-        print!("{}{}{} ", style::Bold, rgb.hex(), style::Reset);
-        println!("--- {}%", dominance * 100.0);
-      }
       println!();
 
-      println!(
-        "{}{}✓ Success!{} Took {}ms",
-        color::Fg(color::Green),
-        style::Bold,
-        style::Reset,
-        time
-      );
+      match output {
+        Ok((result, time)) => {
+
+          for (color, dominance) in result.iter() {
+            let rgb: RGB = RGB::from(color);
+            print!("{}  {} ", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset);
+            print!("{}{}{} ", style::Bold, rgb.hex(), style::Reset);
+            println!("--- {}%", dominance * 100.0);
+          }
+          println!();
+
+          println!(
+            "{}{}✓ Success!{} Took {}ms",
+            color::Fg(color::Green),
+            style::Bold,
+            style::Reset,
+            time
+          );
+
+        },
+        Err(e) => {
+          eprintln!("{}{}Problem creating palette:{} {}", color::Fg(color::Red), style::Bold, style::Reset, e);
+          process::exit(1);
+        },
+      };
 
     }
   }
