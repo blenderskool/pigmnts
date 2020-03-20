@@ -13,6 +13,7 @@ clap = "2.33.0"
 image = "0.23.2"
 spinners = "1.2.0"
 termion = "1.5.5"
+prettytable-rs = "0.8.0"
 pigmnts = { path = "lib" }
 
 [[bin]]
