@@ -61,7 +61,7 @@ run();
 ## Functions
 Pigmnts exposes following function in WebAssembly
 #### pigments(canvas: `HtmlCanvasElement`, num_colors: `u8`, batch_size: `Option<u32>`)
-> Returns an object with **[8-digit Hex](https://css-tricks.com/8-digit-hex-codes/) color codes** as keys and dominance(as percentage) of each color as value found in the image. Eg. {"#6DDAD0FF": 0.3, "#FF3A940A": 0.7}
+> Returns an object with **6-digit Hex color codes** as keys and dominance(as percentage) of each color as value found in the image. Eg. {"#6DDAD0": 0.3, "#FF3A94": 0.7}
 
 - `canvas` canvas element which has the image to be processed. Internally, the pixel data is taken from the canvas, and then clustered to create the color palette.  
 - `num_colors` defines the number of colors to be gathered from the image.  
