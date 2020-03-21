@@ -11,7 +11,7 @@ use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
 use termion::{color, style};
 use prettytable::{Table, format, Row};
-use std::{path::Path, time::Instant, process};
+use std::{time::Instant, process};
 use image::GenericImageView;
 use pigmnts::{Pixels, color::{LAB, RGB, HSL}, weights, pigments_pixels};
 
@@ -171,16 +171,7 @@ fn main() {
       print!("{}{}Creating a palette of ", color::Fg(color::White), style::Bold);
       print!("{}{} ", color::Fg(color::Blue), counts[i]);
       print!("{}colors from ", color::Fg(color::White));
-      println!(
-        "{}{}{}",
-        color::Fg(color::Blue),
-        Path::new(image_path)
-          .file_stem()
-          .unwrap()
-          .to_str()
-          .unwrap(),
-        style::Reset
-      );
+      println!("{}{}{}", color::Fg(color::Blue), image_path, style::Reset);
 
       // Show the spinner in the terminal
       let sp = Spinner::new(Spinners::Dots, String::default());
