@@ -1,0 +1,40 @@
+name: Lib
+on:
+  release:
+    types: [published]
+
+jobs:
+  lib-test:
+    name: Lib tests
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/lib-')
+    steps:
+      - uses: actions/checkout@v2
+      - run: cd lib/
+      - run: cargo test
+
+  lib-publish-npm:
+    needs: lib-test
+    name: Lib publish npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: cd lib/
+      - run: cargo install wasm-pack
+      - run: wasm-pack build -t web
+      - run: wasm-pack publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  lib-publish-crate:
+    needs: lib-test
+    name: Lib publish crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo login ${{ secrets.CRATES_TOKEN }}
+      - run: cargo publish
