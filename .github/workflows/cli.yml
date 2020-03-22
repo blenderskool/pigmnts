@@ -12,44 +12,36 @@ jobs:
       - uses: actions/checkout@v2
       - run: cargo test
 
-  cli-build-linux:
+  cli-build:
     needs: cli-test
-    name: CLI build Linux
-    runs-on: ubuntu-latest
+    name: CLI build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: pigmnts
+            asset_name: pigmnts-linux-amd64
+          - os: windows-latest
+            artifact_name: pigmnts.exe
+            asset_name: pigmnts-windows-amd64
+          - os: macos-latest
+            artifact_name: pigmnts
+            asset_name: pigmnts-macos-amd64
     steps:
-      - uses: actions/checkout@v2
-      - run: cargo build --release
+      - uses: actions/checkout@v1
+      - name: Build
+        run: cargo build --release --locked
       - run: |
-          mkdir linux
-          cp target/release/pigmnts linux/
-          cp README.md LICENSE.md linux/
-          tar czvf linux.tar.gz linux
-      - name: Upload to release
-        uses: JasonEtco/upload-to-release@master
-        with:
-          args: linux.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          mkdir ${{ matrix.asset_name }}
+          cp target/release/${{ matrix.artifact_name }} ${{ matrix.asset_name }}/
+          cp README.md LICENSE.md ${{ matrix.asset_name }}/
+          tar czvf ${{ matrix.asset_name }}.tar.gz ${{ matrix.asset_name }}
 
-  cli-build-macos:
-    needs: cli-test
-    name: CLI build macOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: cargo build --release
-      - uses: actions/upload-artifact@v1
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v1-release
         with:
-          name: macOS
-          path: target/release/pigmnts
-      - run: |
-          mkdir macOS
-          cp target/release/pigmnts macOS/
-          cp README.md LICENSE.md macOS/
-          tar czvf macOS.tar.gz macOS
-      - name: Upload to release
-        uses: JasonEtco/upload-to-release@master
-        with:
-          args: macOS.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.asset_name }}.tar.gz
+          asset_name: ${{ matrix.asset_name }}.tar.gz
+          tag: ${{ github.ref }}
