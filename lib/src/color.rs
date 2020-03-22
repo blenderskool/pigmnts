@@ -1,4 +1,4 @@
-use std::{convert::From};
+use std::{convert::From, fmt};
 
 #[derive(Clone)]
 pub struct RGB {
@@ -295,5 +295,23 @@ impl PartialEq for LAB {
 impl PartialEq for RGB {
     fn eq(&self, other: &Self) -> bool {
         return !(self.r != other.r || self.g != other.g || self.b != other.b);
+    }
+}
+
+impl fmt::Display for LAB {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "lab({}, {}, {})", self.l, self.a, self.b)
+    }
+}
+
+impl fmt::Display for HSL {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "hsl({}, {}%, {}%)", self.h * 360.0, self.s * 100.0, self.l * 100.0)
+    }
+}
+
+impl fmt::Display for RGB {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "rgb({}, {}, {})", self.r, self.g, self.b)
     }
 }

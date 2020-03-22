@@ -1,0 +1,90 @@
+name: CI
+on:
+  release:
+    types: [created]
+
+jobs:
+  lib-test:
+    name: Lib tests
+    runs-on: ubuntu-latest
+    if: git diff $(git tag --sort version:refname | tail -n 2 | head -n 1) $(git tag --sort version:refname | tail -n 1) lib/
+    steps:
+      - uses: actions/checkout@v2
+      - run: cd lib/
+      - run: cargo test
+
+  lib-publish-npm:
+    needs: lib-test
+    name: Lib publish npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: cd lib/
+      - run: cargo install wasm-pack
+      - run: wasm-pack build -t web
+      - run: wasm-pack publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  lib-publish-crate:
+    needs: lib-test
+    name: Lib publish crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo login ${{ secrets.CRATES_TOKEN }}
+      - run: cargo publish
+
+
+  cli-test:
+    name: CLI tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo test
+
+  cli-build-linux:
+    needs: cli-test
+    name: CLI build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo build --release
+      - run: |
+          mkdir linux
+          cp target/release/pigmnts linux/
+          cp README.md LICENSE.md linux/
+          tar czvf linux.tar.gz linux
+      - name: Upload to release
+        uses: JasonEtco/upload-to-release@master
+        with:
+          args: linux.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cli-build-macos:
+    needs: cli-test
+    name: CLI build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo build --release
+      - uses: actions/upload-artifact@v1
+        with:
+          name: macOS
+          path: target/release/pigmnts
+      - run: |
+          mkdir macOS
+          cp target/release/pigmnts macOS/
+          cp README.md LICENSE.md macOS/
+          tar czvf macOS.tar.gz macOS
+      - name: Upload to release
+        uses: JasonEtco/upload-to-release@master
+        with:
+          args: macOS.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
