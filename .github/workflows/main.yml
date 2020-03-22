@@ -83,8 +83,8 @@ jobs:
           cp README.md LICENSE.md macOS/
           tar czvf macOS.tar.gz macOS
       - name: Upload to release
-          uses: JasonEtco/upload-to-release@master
-          with:
-            args: macOS.tar.gz
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: JasonEtco/upload-to-release@master
+        with:
+          args: macOS.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
