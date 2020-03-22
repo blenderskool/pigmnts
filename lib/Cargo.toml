@@ -6,7 +6,7 @@ edition = "2018"
 description = "Generate a color palette from an image using WebAssesmbly"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/blenderskool/pigmnts.git"
+repository = "https://github.com/blenderskool/pigmnts/tree/master/lib"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
