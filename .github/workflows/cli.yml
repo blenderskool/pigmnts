@@ -22,9 +22,6 @@ jobs:
           - os: ubuntu-latest
             artifact_name: pigmnts
             asset_name: pigmnts-linux-amd64
-          - os: windows-latest
-            artifact_name: pigmnts.exe
-            asset_name: pigmnts-windows-amd64
           - os: macos-latest
             artifact_name: pigmnts
             asset_name: pigmnts-macos-amd64
