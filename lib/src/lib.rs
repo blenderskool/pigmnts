@@ -1,14 +1,15 @@
 extern crate rand;
 extern crate wasm_bindgen;
 extern crate web_sys;
+#[macro_use]
+extern crate serde_derive;
 
 pub mod color;
 pub mod weights;
 
 use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
-use color::{RGB, LAB};
+use color::{RGB, HSL, LAB};
 use weights::{Mood, WeightFn, resolve_mood};
-use std::{collections::HashMap};
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -117,6 +118,15 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn) -> Vec<(LAB, f3
         .collect();
 }
 
+
+#[derive(Serialize)]
+struct PaletteColor {
+    pub dominance: f32,
+    pub hex: String,
+    pub rgb: RGB,
+    pub hsl: HSL,
+}
+
 #[wasm_bindgen]
 pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option<u32>) -> JsValue {
     // Get context from canvas element
@@ -154,15 +164,22 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option
             .cloned()
             .collect();
     }
-
-    let mut palette = HashMap::new();
-    // Generate the color palette and convert it to a hashmap
-    // with keys as color hex codes, and values as dominance
+    
+    // Generate the color palette and store it in a Vector of PaletteColor
+    let mut palettes = Vec::new();
     let weight: WeightFn = resolve_mood(&mood);
     for (color, dominance) in pigments_pixels(&pixels, k, weight).iter() {
-        palette.insert(RGB::from(color).hex(), *dominance);
+        let rgb = RGB::from(color);
+        palettes.push(
+            PaletteColor {
+                dominance: *dominance,
+                hex: rgb.hex(),
+                rgb: rgb,
+                hsl: HSL::from(color),
+            }
+        );
     }
 
     // Convert to a JS value
-    return JsValue::from_serde(&palette).unwrap();
+    return JsValue::from_serde(&palettes).unwrap();
 }

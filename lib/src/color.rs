@@ -1,6 +1,6 @@
 use std::{convert::From, fmt};
 
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct RGB {
     pub r: u8,
     pub g: u8,
@@ -14,7 +14,7 @@ pub struct LAB {
     pub b: f32
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct HSL {
     pub h: f32,
     pub s: f32,

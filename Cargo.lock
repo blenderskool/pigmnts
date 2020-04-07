@@ -471,6 +471,8 @@ name = "pigmnts"
 version = "0.4.0"
 dependencies = [
  "rand",
+ "serde",
+ "serde_derive",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -678,6 +680,17 @@ name = "serde"
 version = "1.0.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e707fbbf255b8fc8c3b99abb91e7257a622caeb20a9818cbadbeeede4e0932ff"
+
+[[package]]
+name = "serde_derive"
+version = "1.0.106"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e549e3abf4fb8621bd1609f11dfc9f5e50320802273b12f3811a67e6716ea6c"
+dependencies = [
+ "proc-macro2",
+ "quote 1.0.3",
+ "syn 1.0.16",
+]
 
 [[package]]
 name = "serde_json"

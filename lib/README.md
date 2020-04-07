@@ -61,20 +61,49 @@ run();
 ## Functions
 Pigmnts exposes following function in WebAssembly
 #### pigments(canvas: `HtmlCanvasElement`, num_colors: `u8`, batch_size: `Option<u32>`)
-> Returns an object with **6-digit Hex color codes** as keys and dominance(as percentage) of each color as value found in the image. Eg. {"#6DDAD0": 0.3, "#FF3A94": 0.7}
 
+##### Arguments
 - `canvas` canvas element which has the image to be processed. Internally, the pixel data is taken from the canvas, and then clustered to create the color palette.  
 - `num_colors` defines the number of colors to be gathered from the image.  
 - `batch_size` (optional) defines the number of pixels to randomly sample from the image. It should be greater than the total number of pixels in the image and the `num_colors`. By default, all the pixels in the image are processed.
 
+##### Return
+Returns an Array of Objects where each Object is a color of the following format.
+```javascript
+[
+  {
+    dominance: 0.565    // Dominance of color in image(From 0 to 1)
+    hex: '#6DDAD0'      // 6-digit Hex color code
+    rgb: {              // Equivalent RGB color
+      r: 109,
+      g: 218,
+      b: 208
+    },
+    hsl: {             // Equivalent HSL color (Normalized to 0-1)
+      h: 0.48333,
+      s: 0.6,
+      l: 0.64,
+    }
+  },
+  // Other colors
+  {
+    ...
+  }
+]
+```
+
 If this crate is used in some Rust projects, then following function is also available
 #### pigments_pixels(pixels: `&Vec<LAB>`, num_colors: `u8`) -> `Vec<(LAB, f32)>`
-> Returns a vector of tuples with colors as `LAB` and dominance(as percentage) of each color found in the image.
 
+This function can be used when color data is gathered from an image decoded using [image-rs](https://github.com/image-rs/image).
+
+##### Arguments
 - `pixels` reference to a Vector of colors in `LAB` format.
 - `num_colors` defines the number of colors to be gathered from the image.
 
-This function can be used when color data is gathered from an image decoded using [image-rs](https://github.com/image-rs/image).
+##### Return
+Returns a vector of tuples with colors as `LAB` and dominance(as percentage) of each color found in the image.
+
 
 ## License
 Pigmnts is [MIT Licensed](https://github.com/blenderskool/pigmnts/blob/master/LICENSE.md)

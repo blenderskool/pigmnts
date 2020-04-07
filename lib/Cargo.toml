@@ -11,6 +11,10 @@ repository = "https://github.com/blenderskool/pigmnts/tree/master/lib"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[dependencies]
+serde = "^1.0.59"
+serde_derive = "^1.0.59"
+
 [dependencies.rand]
 version = "0.7.2"
 features = ["wasm-bindgen"]
