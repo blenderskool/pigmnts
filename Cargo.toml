@@ -25,3 +25,7 @@ path = "src/main.rs"
 members = [
   "lib"
 ]
+
+[profile.release]
+lto = true
+codegen-units = 1

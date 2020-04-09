@@ -30,6 +30,7 @@ jobs:
       - name: Build
         run: cargo build --release --locked
       - run: |
+          strip target/release/${{ matrix.artifact_name }}
           mkdir ${{ matrix.asset_name }}
           cp target/release/${{ matrix.artifact_name }} ${{ matrix.asset_name }}/
           cp README.md LICENSE.md ${{ matrix.asset_name }}/
