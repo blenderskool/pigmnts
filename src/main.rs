@@ -6,6 +6,7 @@ extern crate spinners;
 extern crate termion;
 extern crate image;
 extern crate pigmnts;
+extern crate reqwest;
 
 use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
@@ -41,9 +42,20 @@ macro_rules! conditional_vec {
 /// Creates a color palette from image
 /// 
 /// Image is loaded from `image_path` and a palette of `count` colors are created
-fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), image::ImageError> {
-  let img = image::open(image_path)?
-              .resize(800, 800, image::imageops::FilterType::CatmullRom);
+fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<dyn std::error::Error>> {
+  let mut img;
+
+  if image_path.starts_with("http://") || image_path.starts_with("https://") {
+    let mut res = reqwest::blocking::get(image_path)?;
+    let mut buf: Vec<u8> = vec![];
+    res.copy_to(&mut buf)?;
+    img = image::load_from_memory(buf.as_slice())?;
+  }
+  else {
+    img = image::open(image_path)?;
+  }
+  
+  img = img.resize(800, 800, image::imageops::FilterType::CatmullRom);
 
   let mut pixels: Pixels = Vec::new();
 
