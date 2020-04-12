@@ -153,13 +153,7 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option
     // Convert to Pixels type
     let mut pixels: Pixels = (0..data.len())
         .step_by(4)
-        .map(|i| LAB::from(
-            &RGB {
-                r: data[i],
-                g: data[i + 1],
-                b: data[i + 2]
-            }
-        ))
+        .map(|i| LAB::from_rgb(data[i], data[i+1], data[i+2]))
         .collect();
 
     // Randomly choose a sample of batch size if given

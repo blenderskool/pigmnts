@@ -62,13 +62,7 @@ fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<d
     
     let pixels: Pixels = img
         .pixels()
-        .map(|(_, _, pix)| LAB::from(
-            &RGB {
-                r: pix[0],
-                g: pix[1],
-                b: pix[2],
-            }
-        ))
+        .map(|(_, _, pix)| LAB::from_rgb(pix[0], pix[1], pix[2]))
         .collect();
     
     let weightfn = weights::resolve_mood(&weights::Mood::Dominant);
