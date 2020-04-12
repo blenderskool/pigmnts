@@ -142,6 +142,17 @@ impl From<&HSL> for RGB {
 impl LAB {
 
     /**
+     * Helper function to create a LAB color from RGB values without creating intermediate struct
+     */
+    pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+        Self::from(&RGB {
+            r: r,
+            g: g,
+            b: b,
+        })
+    }
+
+    /**
      * Calculates the chroma of the color 
      */
     pub fn chroma(&self) -> f32 {
