@@ -55,7 +55,7 @@ fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<d
     img = image::open(image_path)?;
   }
   
-  img = img.resize(800, 800, image::imageops::FilterType::CatmullRom);
+  img = img.resize(512, 512, image::imageops::FilterType::CatmullRom);
 
   // Start a timer
   let now = Instant::now();
