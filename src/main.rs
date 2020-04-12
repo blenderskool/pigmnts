@@ -57,23 +57,22 @@ fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<d
   
   img = img.resize(800, 800, image::imageops::FilterType::CatmullRom);
 
-  let mut pixels: Pixels = Vec::new();
-
   // Start a timer
   let now = Instant::now();
 
-  for (_, _, pix) in img.pixels() {
-    pixels.push(LAB::from(
+  let pixels: Pixels = img
+    .pixels()
+    .map(|(_, _, pix)| LAB::from(
       &RGB {
         r: pix[0],
         g: pix[1],
         b: pix[2],
       }
-    ));
-  }
+    ))
+    .collect();
 
   let weightfn = weights::resolve_mood(&weights::Mood::Dominant);
-  let mut output = pigments_pixels(&pixels, count, weightfn);
+  let mut output = pigments_pixels(&pixels, count, weightfn, None);
 
   // Sort the output colors based on dominance
   output.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
