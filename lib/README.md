@@ -60,12 +60,13 @@ run();
 
 ## Functions
 Pigmnts exposes following function in WebAssembly
-#### pigments(canvas: `HtmlCanvasElement`, num_colors: `u8`, batch_size: `Option<u32>`)
+#### pigments(canvas: `HtmlCanvasElement`, k: `number`, mood: `Mood|number`, batch_size: `number`)
 
 ##### Arguments
 - `canvas` canvas element which has the image to be processed. Internally, the pixel data is taken from the canvas, and then clustered to create the color palette.  
-- `num_colors` defines the number of colors to be gathered from the image.  
-- `batch_size` (optional) defines the number of pixels to randomly sample from the image. It should be greater than the total number of pixels in the image and the `num_colors`. By default, all the pixels in the image are processed.
+- `k` defines the number of colors to be gathered from the image.  
+- `mood` defines the weight function to use. Only 'dominant' mood is supported which has a value of `0`
+- `batch_size` (optional) defines the number of pixels to randomly sample from the image. It should be greater than the total number of pixels in the image and the `k`. By default, all the pixels in the image are processed.
 
 ##### Return
 Returns an Array of Objects where each Object is a color of the following format.
@@ -93,13 +94,15 @@ Returns an Array of Objects where each Object is a color of the following format
 ```
 
 If this crate is used in some Rust projects, then following function is also available
-#### pigments_pixels(pixels: `&Vec<LAB>`, num_colors: `u8`) -> `Vec<(LAB, f32)>`
+#### pigments_pixels(pixels: `&Vec<LAB>`, k: `u8`, weight: `fn(&LAB) -> f32`, max_iter: `Option<u16>`) -> `Vec<(LAB, f32)>`
 
 This function can be used when color data is gathered from an image decoded using [image-rs](https://github.com/image-rs/image).
 
 ##### Arguments
 - `pixels` reference to a Vector of colors in `LAB` format.
-- `num_colors` defines the number of colors to be gathered from the image.
+- `k` defines the number of colors to be gathered from the image.
+- `weight` defines the weight function to use. `src/weights.rs` file has few implemented weight functions.
+- `max_iter` defines the maximum iterations that algorithm makes, default is `300`
 
 ##### Return
 Returns a vector of tuples with colors as `LAB` and dominance(as percentage) of each color found in the image.

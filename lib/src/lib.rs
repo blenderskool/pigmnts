@@ -44,7 +44,11 @@ fn recal_means(colors: &Vec<&LAB>, weight: WeightFn) -> LAB {
 /**
  * K-means++ clustering to create the palette
  */
-pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn) -> Vec<(LAB, f32)> {
+pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn, max_iter: Option<u16>) -> Vec<(LAB, f32)> {
+    // Values referenced from https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+    const TOLERANCE: f32 = 1e-4;
+    const MAX_ITER: u16 = 300;
+
     let mut rng = rand::thread_rng();
 
     // Randomly pick the starting cluster center
@@ -82,6 +86,7 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn) -> Vec<(LAB, f3
     }
 
     let mut clusters: Vec<Vec<&LAB>>;
+    let mut iters_left = max_iter.unwrap_or(MAX_ITER);
     loop {
         clusters = vec![Vec::new(); k as usize];
 
@@ -92,14 +97,16 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn) -> Vec<(LAB, f3
         let mut changed: bool = false;
         for i in 0..clusters.len() {
             let new_mean = recal_means(&clusters[i], weight);
-            if means[i] != new_mean {
+            if means[i].distance(&new_mean) > TOLERANCE {
                 changed = true;
             }
 
             means[i] = new_mean;
         }
 
-        if !changed {
+        iters_left -= 1;
+
+        if !changed || iters_left <= 0 {
             break;
         }
     }
@@ -146,13 +153,7 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option
     // Convert to Pixels type
     let mut pixels: Pixels = (0..data.len())
         .step_by(4)
-        .map(|i| LAB::from(
-            &RGB {
-                r: data[i],
-                g: data[i + 1],
-                b: data[i + 2]
-            }
-        ))
+        .map(|i| LAB::from_rgb(data[i], data[i+1], data[i+2]))
         .collect();
 
     // Randomly choose a sample of batch size if given
@@ -166,19 +167,19 @@ pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option
     }
     
     // Generate the color palette and store it in a Vector of PaletteColor
-    let mut palettes = Vec::new();
     let weight: WeightFn = resolve_mood(&mood);
-    for (color, dominance) in pigments_pixels(&pixels, k, weight).iter() {
-        let rgb = RGB::from(color);
-        palettes.push(
+    let palettes: Vec<PaletteColor> = pigments_pixels(&pixels, k, weight, None)
+        .iter()
+        .map(|(color, dominance)| {
+            let rgb = RGB::from(color);
             PaletteColor {
                 dominance: *dominance,
                 hex: rgb.hex(),
                 rgb: rgb,
                 hsl: HSL::from(color),
             }
-        );
-    }
+        })
+        .collect();
 
     // Convert to a JS value
     return JsValue::from_serde(&palettes).unwrap();

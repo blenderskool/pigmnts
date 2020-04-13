@@ -1,6 +1,6 @@
 [package]
 name = "pigmnts-cli"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Akash Hamirwasia"]
 edition = "2018"
 description = "Generate a color palette from an image using WebAssesmbly"
@@ -15,6 +15,7 @@ spinners = "1.2.0"
 termion = "1.5.5"
 prettytable-rs = "0.8.0"
 pigmnts = { path = "lib" }
+reqwest = { version = "0.10", features = ["blocking"] }
 
 [[bin]]
 name = "pigmnts"
@@ -24,3 +25,7 @@ path = "src/main.rs"
 members = [
   "lib"
 ]
+
+[profile.release]
+lto = true
+codegen-units = 1
