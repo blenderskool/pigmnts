@@ -1,6 +1,6 @@
 [package]
 name = "pigmnts-cli"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Akash Hamirwasia"]
 edition = "2018"
 description = "Generate a color palette from an image using WebAssesmbly"
