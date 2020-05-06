@@ -7,6 +7,8 @@ extern crate termion;
 extern crate image;
 extern crate pigmnts;
 extern crate reqwest;
+extern crate serde;
+extern crate serde_json;
 
 use clap::{App, Arg};
 use spinners::{Spinner, Spinners};
@@ -15,9 +17,10 @@ use prettytable::{Table, format, Row};
 use std::{time::Instant, process};
 use image::GenericImageView;
 use pigmnts::{Pixels, color::{LAB, RGB, HSL}, weights, pigments_pixels};
+use serde::{Deserialize};
 
 /// Creates a vector of strings with elements added conditonally
-/// 
+///
 /// # Example
 /// ```
 /// let myvec = conditional_vec![
@@ -40,11 +43,11 @@ macro_rules! conditional_vec {
 }
 
 /// Creates a color palette from image
-/// 
+///
 /// Image is loaded from `image_path` and a palette of `count` colors are created
 fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<dyn std::error::Error>> {
     let mut img;
-    
+
     if image_path.starts_with("http://") || image_path.starts_with("https://") {
         let mut res = reqwest::blocking::get(image_path)?;
         let mut buf: Vec<u8> = vec![];
@@ -54,28 +57,67 @@ fn pigmnts(image_path: &str, count: u8) -> Result<(Vec<(LAB, f32)>, u128), Box<d
     else {
         img = image::open(image_path)?;
     }
-    
+
     img = img.resize(512, 512, image::imageops::FilterType::CatmullRom);
-    
+
     // Start a timer
     let now = Instant::now();
-    
+
     let pixels: Pixels = img
         .pixels()
         .map(|(_, _, pix)| LAB::from_rgb(pix[0], pix[1], pix[2]))
         .collect();
-    
+
     let weightfn = weights::resolve_mood(&weights::Mood::Dominant);
     let mut output = pigments_pixels(&pixels, count, weightfn, None);
-    
+
     // Sort the output colors based on dominance
     output.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
-    
+
     return Ok((output, now.elapsed().as_millis()));
 }
 
+///Calls an API to return name of the color
+fn find_name(hex: &str) -> Result< String, Box<dyn std::error::Error>> {
+    #[derive(Deserialize, Debug)]
+    struct Ip {
+        colors: Vec<Color>,
+    }
+
+    #[derive(Deserialize, Debug)]
+    //Do not convert to snake case - Will Break Deserialization
+    struct Color {
+        hex: String,
+        name: String,
+        rgb: Rgb,
+        requestedHex: String,
+        luminance: f32,
+        distance: f32,
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Rgb {
+        r: u32,
+        g: u32,
+        b: u32,
+    }
+    let hex = hex.replace("#", "");
+    let request_url = format!("https://api.color.pizza/v1/{hex}", hex=hex);
+    //  .json::<HashMap<String, String>>()?;
+
+    let resp = reqwest::blocking::ClientBuilder::new()
+    .gzip(true)
+    .build()?
+    .get(&request_url)
+    .send()?
+    .json::<Ip>()?;
+
+    let nm = &resp.colors[0].name;
+    return Ok(nm.to_string());
+}
+
 fn main() {
-    
+
     let matches = App::new("Pigmnts")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -119,8 +161,12 @@ fn main() {
             .short("d")
             .long("dominance")
             .help("Enable dominance percentage of colors"))
+        .arg(Arg::with_name("names")
+            .short("n")
+            .long("names")
+            .help("Enable names of colors"))
         .get_matches();
-    
+
     let image_paths = matches.values_of("input").unwrap();
     let mut counts = values_t!(matches, "count", u8).unwrap_or(Vec::new());
     let is_quiet = matches.is_present("quiet");
@@ -128,13 +174,14 @@ fn main() {
     let is_hsl = matches.is_present("hsl");
     let is_lab = matches.is_present("lab");
     let is_dom = matches.is_present("dominance");
+    let is_name = matches.is_present("names");
     let mut is_hex = matches.is_present("hex");
-    
+
     // Hex format is enabled when other formats are disabled
     if !is_rgb && !is_hsl & !is_lab {
         is_hex = true;
     }
-    
+
     // Fill the default count value (5) for every input file if not specified
     loop {
         let diff: i8 = image_paths.len() as i8 - counts.len() as i8;
@@ -144,40 +191,45 @@ fn main() {
             break;
         }
     }
-    
+
     // Enumerate through each image_path and generate palettes
     for (i, image_path) in image_paths.enumerate() {
-        
+
         if is_quiet {
             // Quiet mode only shows the result separated by ':'
-            
+
             let (result, _) = pigmnts(image_path, counts[i])
                 .unwrap_or_else(|err| {
                     eprintln!("Problem creating palette: {}", err);
                     process::exit(1);
                 });
-            
+
             for (color, dominance) in result.iter() {
                 let rgb = RGB::from(color);
-                
+                let name = find_name(&rgb.hex())
+                .unwrap_or_else(|err| {
+                    eprintln!("Problem fetching name: {}", err);
+                    process::exit(1);
+                });
                 let record = conditional_vec![
                     is_hex => rgb.hex(),
                     is_rgb => rgb,
                     is_hsl => HSL::from(color),
                     is_lab => color,
-                    is_dom => dominance * 100.0
+                    is_dom => dominance * 100.0,
+                    is_name => name
                 ];
-                
+
                 println!("{}", record.join(":"));
             }
-            
+
         } else {
-            
+
             print!("{}{}Creating a palette of ", color::Fg(color::White), style::Bold);
             print!("{}{} ", color::Fg(color::Blue), counts[i]);
             print!("{}colors from ", color::Fg(color::White));
             println!("{}{}{}", color::Fg(color::Blue), image_path, style::Reset);
-            
+
             // Show the spinner in the terminal
             let sp = Spinner::new(Spinners::Dots, String::default());
             let (result, time) = pigmnts(image_path, counts[i])
@@ -191,11 +243,11 @@ fn main() {
                     );
                     process::exit(1);
                 });
-            
+
             // Stop the spinner
             sp.stop();
             println!();
-            
+
             let mut table = Table::new();
             table.set_format(
                 format::FormatBuilder::from(*format::consts::FORMAT_CLEAN)
@@ -208,7 +260,8 @@ fn main() {
                 is_rgb => "RGB",
                 is_hsl => "HSL",
                 is_lab => "LAB",
-                is_dom => "Dominance"
+                is_dom => "Dominance",
+                is_name => "Name"
             ];
             table.set_titles(
                 Row::new(
@@ -218,30 +271,36 @@ fn main() {
                         .collect()
                 )
             );
-            
+
             for (color, dominance) in result.iter() {
                 let rgb = RGB::from(color);
+                let name = find_name(&rgb.hex())
+                .unwrap_or_else(|err| {
+                    eprintln!("Problem fetching name: {}", err);
+                    process::exit(1);
+                });
                 let values = conditional_vec![
                     is_hex => rgb.hex(),
                     is_rgb => rgb,
                     is_hsl => HSL::from(color),
                     is_lab => color,
-                    is_dom => format!("{}%", dominance * 100.0)
+                    is_dom => format!("{}%", dominance * 100.0),
+                    is_name => name
                 ];
                 let mut record = row![
                     // Color preview is added
                     format!("{}  {}", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset)
                 ];
-                
+
                 for value in values.iter() {
                     record.add_cell(cell!(value));
                 }
-                
+
                 table.add_row(record);
             }
             table.printstd();
             println!();
-            
+
             println!(
                 "{}{}✓ Success!{} Took {}ms",
                 color::Fg(color::Green),
@@ -251,5 +310,5 @@ fn main() {
             );
         }
     }
-    
+
 }
