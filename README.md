@@ -33,6 +33,7 @@ FLAGS:
     -l, --lab          Enable L*AB output of colors
     -q, --quiet        Suppress the normal output [aliases: silent]
     -r, --rgb          Enable RGB output of colors
+    -n, --name         Nearest name for the color
     -V, --version      Prints version information
 
 OPTIONS:
@@ -47,8 +48,12 @@ OPTIONS:
 - `pigmnts pic-1.jpg -rxdl`  
   Generate a palette of 5 colors from pic-1.jpg and show the RGB code, hex code, dominance, LAB code for each color in the palette.
 
+- `pigmnts pic-1.jpg --count 10 --name --hex`  
+  Generate a palette of 10 colors from pic-1.jpg and show the name, hex code for each color in the palette.
+
 - `pigmnts pic-1.jpg pic-2.jpg -sxq`  
   Generate a palette of 5 colors from pic-1.jpg and pic-2.jpg. For each color in the palette show the HSL code, hex code in `quiet` mode.
+
 
 
 ## Contributing
@@ -61,3 +66,4 @@ This repository is a Cargo workspace that includes the development of both core 
 
 ## License
 Pigmnts is [MIT Licensed](https://github.com/blenderskool/pigmnts/blob/master/LICENSE.md)
+The dataset for color names used in Pigmnts CLI is taken from https://github.com/meodai/color-names
