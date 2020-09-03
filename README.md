@@ -65,5 +65,5 @@ This repository is a Cargo workspace that includes the development of both core 
 
 
 ## License
-Pigmnts is [MIT Licensed](https://github.com/blenderskool/pigmnts/blob/master/LICENSE.md)
+Pigmnts is [MIT Licensed](https://github.com/blenderskool/pigmnts/blob/master/LICENSE.md)  
 The dataset for color names used in Pigmnts CLI is taken from https://github.com/meodai/color-names
