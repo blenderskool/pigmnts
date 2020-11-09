@@ -17,7 +17,11 @@ fn hex_to_rgb(s: &str) -> RGB {
 
 lazy_static! {
   static ref COLOR_NAMES: (Vec<String>, Vec<LAB>) = {
-      let data: HashMap<String, String> = serde_cbor::from_slice(include_bytes!("../data/colornames.cbor")).unwrap();
+      let data: HashMap<String, String> = serde_cbor::from_slice(
+        include_bytes!(
+          concat!(env!("OUT_DIR"), "/colornames.cbor"))
+      ).unwrap();
+
       let values: Vec<LAB> = data
           .iter()
           .map(|(val, _)| LAB::from(&hex_to_rgb(val)))

@@ -9,6 +9,13 @@ Pigmnts CLI is a tool designed to create color palettes from an image right on y
 
 Pigmnts CLI comes with various output modes and provides on-demand data of the palette generated while maintaining high speeds.
 
+### Installing the CLI
+CLI can be installed using `cargo` and `pigmnts-cli` crate on crates.io
+```bash
+cargo install pigmnts-cli
+```
+
+
 ### Output modes
 
 #### Default mode

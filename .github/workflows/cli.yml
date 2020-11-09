@@ -46,3 +46,12 @@ jobs:
           file: ${{ matrix.asset_name }}.tar.gz
           asset_name: ${{ matrix.asset_name }}.tar.gz
           tag: ${{ github.ref }}
+
+  cli-publish:
+    needs: cli-test
+    name: CLI publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo login ${{ secrets.CRATES_TOKEN }}
+      - run: cargo publish
