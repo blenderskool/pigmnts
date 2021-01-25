@@ -14,6 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 serde = "^1.0.59"
 serde_derive = "^1.0.59"
+crossbeam-utils = "0.8"
 
 [dependencies.rand]
 version = "0.7.2"

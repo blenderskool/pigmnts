@@ -1,24 +1,29 @@
-extern crate rand;
-extern crate wasm_bindgen;
-extern crate web_sys;
-#[macro_use]
-extern crate serde_derive;
-
 pub mod color;
 pub mod weights;
 
-use rand::{distributions::WeightedIndex, prelude::*, seq::SliceRandom};
-use color::{RGB, HSL, LAB};
-use weights::{Mood, WeightFn, resolve_mood};
-use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+use rand::{distributions::WeightedIndex, prelude::*};
+use color::LAB;
+use weights::WeightFn;
+
+#[cfg(target_arch = "wasm32")]
+use {
+    wasm_bindgen::{prelude::*, JsCast},
+    web_sys::{CanvasRenderingContext2d, HtmlCanvasElement},
+    weights::{Mood, resolve_mood},
+    color::{RGB, HSL},
+    serde_derive::Serialize,
+};
+
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    std::cmp,
+    crossbeam_utils::thread,
+};
 
 pub type Pixels = Vec<LAB>;
 
-/**
- * Recalculate the means
- */
-fn recal_means(colors: &Vec<&LAB>, weight: WeightFn) -> LAB {
+/// Recalculates the means using a weight function
+fn recal_means(colors: &Vec<LAB>, weight: WeightFn) -> LAB {
     let mut new_color = LAB {
         l: 0.0,
         a: 0.0,
@@ -27,7 +32,7 @@ fn recal_means(colors: &Vec<&LAB>, weight: WeightFn) -> LAB {
     let mut w_sum = 0.0;
 
     for col in colors.iter() {
-        let w = weight(*col);
+        let w = weight(col);
         w_sum += w;
         new_color.l += w * col.l;
         new_color.a += w * col.a;
@@ -41,15 +46,67 @@ fn recal_means(colors: &Vec<&LAB>, weight: WeightFn) -> LAB {
     return new_color;
 }
 
-/**
- * K-means++ clustering to create the palette
- */
+#[cfg(target_arch = "wasm32")]
+fn find_clusters(pixels: &Pixels, means: &Pixels, k: usize) -> Vec<Pixels> {
+    let mut clusters: Vec<Pixels> = vec![Vec::new(); k];
+
+    for color in pixels.iter() {
+        clusters[color.nearest(means).0].push(color.clone());
+    }
+
+    return clusters;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn find_clusters(pixels: &Pixels, means: &Pixels, k: usize) -> Vec<Pixels> {
+    const NUM_THREADS: usize = 5;
+
+    let num_pixels = pixels.len();
+    let sample_size = num_pixels / NUM_THREADS;
+    let mut clusters: Vec<Pixels> = vec![Vec::new(); k as usize];
+    
+    thread::scope(|s| {
+        let mut threads = vec![];
+        
+        // Data parallelism where each thread operates on a sample of data
+        for i in 0..NUM_THREADS {
+            let start = i * sample_size;
+            let end = cmp::min(start + sample_size, num_pixels);
+
+            // Each thread is responsible in finding the nearest cluster mean for each point in the sample (map phase)
+            threads.push(
+                s.spawn(move |_| {
+                    let mut clusters: Vec<Vec<LAB>> = vec![Vec::new(); k];
+                    for pixel_idx in start..end {
+                        let color = &pixels[pixel_idx];
+                        clusters[color.nearest(&means).0].push(color.clone());
+                    }
+                    return clusters;
+                })
+            );
+        }
+
+        // Results from each thread is combined (or reduced)
+        for t in threads {
+            let mut mid_clusters = t.join().unwrap();
+            for (i, cluster) in mid_clusters.iter_mut().enumerate() {
+                clusters[i].append(cluster);
+            }
+        }
+
+    }).unwrap();
+
+    return clusters;
+}
+
+/// Parallelized K-means++ clustering to create the palette from pixels
 pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn, max_iter: Option<u16>) -> Vec<(LAB, f32)> {
     // Values referenced from https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
     const TOLERANCE: f32 = 1e-4;
     const MAX_ITER: u16 = 300;
 
     let mut rng = rand::thread_rng();
+    let k = k as usize;
 
     // Randomly pick the starting cluster center
     let i: usize = rng.gen_range(0, pixels.len());
@@ -85,15 +142,14 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn, max_iter: Optio
         means.push(pixels[dist.sample(&mut rng)].clone());
     }
 
-    let mut clusters: Vec<Vec<&LAB>>;
+    let mut clusters: Vec<Vec<LAB>>;
     let mut iters_left = max_iter.unwrap_or(MAX_ITER);
+
     loop {
-        clusters = vec![Vec::new(); k as usize];
+        // Assignment step: Clusters are formed in current iteration
+        clusters = find_clusters(pixels, &means, k);
 
-        for color in pixels.iter() {
-            clusters[color.nearest(&means).0].push(color);
-        }
-
+        // Updation step: New cluster means are calculated
         let mut changed: bool = false;
         for i in 0..clusters.len() {
             let new_mean = recal_means(&clusters[i], weight);
@@ -126,16 +182,18 @@ pub fn pigments_pixels(pixels: &Pixels, k: u8, weight: WeightFn, max_iter: Optio
 }
 
 
-#[derive(Serialize)]
-struct PaletteColor {
-    pub dominance: f32,
-    pub hex: String,
-    pub rgb: RGB,
-    pub hsl: HSL,
-}
-
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn pigments(canvas: HtmlCanvasElement, k: u8, mood: Mood, batch_size: Option<u32>) -> JsValue {
+
+    #[derive(Serialize)]
+    struct PaletteColor {
+        pub dominance: f32,
+        pub hex: String,
+        pub rgb: RGB,
+        pub hsl: HSL,
+    }
+
     // Get context from canvas element
     let ctx = canvas
         .get_context("2d")
