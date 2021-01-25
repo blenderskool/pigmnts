@@ -1,6 +1,3 @@
-extern crate serde_cbor;
-extern crate serde_json;
-
 use std::fs::File;
 use std::env;
 

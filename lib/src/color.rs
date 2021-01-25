@@ -1,4 +1,5 @@
 use std::{convert::From, fmt};
+use serde_derive::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct RGB {
