@@ -1,9 +1,9 @@
 [package]
 name = "pigmnts"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Akash Hamirwasia"]
 edition = "2018"
-description = "Generate a color palette from an image using WebAssesmbly"
+description = "Generate a color palette from an image using K-means++"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/blenderskool/pigmnts/tree/master/lib"
