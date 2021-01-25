@@ -1,4 +1,3 @@
-extern crate wasm_bindgen;
 use crate::color;
 
 use wasm_bindgen::{prelude::*};

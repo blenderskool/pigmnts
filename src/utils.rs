@@ -1,7 +1,6 @@
-extern crate serde_cbor;
-
 use pigmnts::color::{LAB, RGB};
 use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 /// Coverts a hex string to RGB color
 fn hex_to_rgb(s: &str) -> RGB {
