@@ -1,21 +1,9 @@
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate prettytable;
-extern crate spinners;
-extern crate termion;
-extern crate image;
-extern crate pigmnts;
-extern crate reqwest;
-#[macro_use]
-extern crate lazy_static;
-
 pub mod utils;
 
-use clap::{App, Arg};
+use clap::{App, Arg, values_t};
 use spinners::{Spinner, Spinners};
 use termion::{color, style};
-use prettytable::{Table, format, Row};
+use prettytable::{Table, format, Row, cell, row};
 use std::{time::Instant, process};
 use image::GenericImageView;
 use pigmnts::{Pixels, color::{LAB, RGB, HSL}, weights, pigments_pixels};
@@ -35,7 +23,7 @@ macro_rules! conditional_vec {
             let mut temp_vec = Vec::new();
             $(
                 if $x {
-                    temp_vec.push(format!("{}", $y));
+                    temp_vec.push(format!("{}", $y()));
                 }
             )*
             temp_vec
@@ -169,12 +157,12 @@ fn main() {
                 let rgb = RGB::from(color);
 
                 let record = conditional_vec![
-                    is_hex => rgb.hex(),
-                    is_rgb => rgb,
-                    is_hsl => HSL::from(color),
-                    is_lab => color,
-                    is_dom => dominance * 100.0,
-                    is_name => utils::near_color_name(color)
+                    is_hex => || rgb.hex(),
+                    is_rgb => || rgb,
+                    is_hsl => || HSL::from(color),
+                    is_lab => || color,
+                    is_dom => || dominance * 100.0,
+                    is_name => || utils::near_color_name(color)
                 ];
 
                 println!("{}", record.join(":"));
@@ -212,13 +200,13 @@ fn main() {
                     .build()
             );
             let titles = conditional_vec![
-                true => "",  // Title for color preview
-                is_name => "Name",
-                is_hex => "Hex",
-                is_rgb => "RGB",
-                is_hsl => "HSL",
-                is_lab => "LAB",
-                is_dom => "Dominance"
+                true => || "",  // Title for color preview
+                is_name => || "Name",
+                is_hex => || "Hex",
+                is_rgb => || "RGB",
+                is_hsl => || "HSL",
+                is_lab => || "LAB",
+                is_dom => || "Dominance"
             ];
             table.set_titles(
                 Row::new(
@@ -231,17 +219,18 @@ fn main() {
 
             for (color, dominance) in result.iter() {
                 let rgb = RGB::from(color);
-                let values = conditional_vec![
-                    is_name => utils::near_color_name(color),
-                    is_hex => rgb.hex(),
-                    is_rgb => rgb,
-                    is_hsl => HSL::from(color),
-                    is_lab => color,
-                    is_dom => format!("{}%", dominance * 100.0)
-                ];
                 let mut record = row![
                     // Color preview is added
                     format!("{}  {}", color::Bg(color::Rgb(rgb.r, rgb.g, rgb.b)), style::Reset)
+                ];
+
+                let values = conditional_vec![
+                    is_name => || utils::near_color_name(color),
+                    is_hex => || rgb.hex(),
+                    is_rgb => || rgb,
+                    is_hsl => || HSL::from(color),
+                    is_lab => || color,
+                    is_dom => || format!("{}%", dominance * 100.0)
                 ];
 
                 for value in values.iter() {
