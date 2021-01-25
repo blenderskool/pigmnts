@@ -70,7 +70,7 @@ fn main() {
     let matches = App::new("Pigmnts")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
-        .about("Create color palette from image")
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(Arg::with_name("count")
             .short("c")
             .long("count")
